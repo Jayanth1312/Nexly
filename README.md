@@ -1,7 +1,3 @@
-# Nexly Backend
-
-A Node.js backend application with AI-powered search capabilities.
-
 ## Features
 
 - Health check endpoint
@@ -52,5 +48,6 @@ npm start
 
 - Node.js
 - Express.js
+- Langchain
 - Groq AI
-- Custom AI services
+- Exa Services
