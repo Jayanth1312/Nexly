@@ -1,9 +1,10 @@
 const { validateInput } = require("../utils/helpers");
 const { tryDirectAnswer, performSearchBasedAnswer } = require("../services/ai");
+const chatHistoryService = require("../services/chatHistory");
 
 const searchController = async (req, res) => {
   const startTime = Date.now();
-  let { query, sessionId = "default" } = req.body;
+  let { query, sessionId = "default", userId = "anonymous" } = req.body;
 
   try {
     query = validateInput(query);
@@ -25,27 +26,81 @@ const searchController = async (req, res) => {
       console.log("Answering directly from model knowledge");
       const processingTime = Date.now() - startTime;
 
-      return res.json({
+      const response = {
         answer: directResult.answer,
         sources: [],
         sessionId: sessionId,
         responseType: "direct",
         processingTime: `${processingTime}ms (no web search needed)`,
         timestamp: new Date().toISOString(),
-      });
+      };
+
+      // Save conversation to database
+      try {
+        await chatHistoryService.saveConversation(
+          sessionId,
+          query,
+          {
+            answer: directResult.answer,
+            sources: [],
+            responseType: "direct",
+            processingTime: response.processingTime,
+          },
+          {
+            userId,
+            ipAddress: req.ip,
+            userAgent: req.get("User-Agent"),
+          }
+        );
+      } catch (dbError) {
+        console.error(
+          "Failed to save conversation to database:",
+          dbError.message
+        );
+        // Don't fail the request if database save fails
+      }
+
+      return res.json(response);
     }
 
     const searchResult = await performSearchBasedAnswer(query, sessionId);
     const processingTime = Date.now() - startTime;
 
-    res.json({
+    const response = {
       answer: searchResult.answer,
       sources: searchResult.sources,
       sessionId: sessionId,
       responseType: "search",
       processingTime: `${processingTime}ms (web search performed)`,
       timestamp: new Date().toISOString(),
-    });
+    };
+
+    // Save conversation to database
+    try {
+      await chatHistoryService.saveConversation(
+        sessionId,
+        query,
+        {
+          answer: searchResult.answer,
+          sources: searchResult.sources,
+          responseType: "search",
+          processingTime: response.processingTime,
+        },
+        {
+          userId,
+          ipAddress: req.ip,
+          userAgent: req.get("User-Agent"),
+        }
+      );
+    } catch (dbError) {
+      console.error(
+        "Failed to save conversation to database:",
+        dbError.message
+      );
+      // Don't fail the request if database save fails
+    }
+
+    res.json(response);
   } catch (error) {
     const processingTime = Date.now() - startTime;
     console.error(`Error processing query "${query}":`, error.message);

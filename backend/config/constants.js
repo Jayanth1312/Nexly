@@ -1,6 +1,7 @@
-require("dotenv").config();
+const path = require("path");
+require("dotenv").config({ path: path.join(__dirname, "../.env") });
 
-const requiredEnvVars = ["GROQ_API_KEY", "EXA_API_KEY"];
+const requiredEnvVars = ["GROQ_API_KEY", "EXA_API_KEY", "MONGODB_URI"];
 const missingEnvVars = requiredEnvVars.filter((envVar) => !process.env[envVar]);
 
 if (missingEnvVars.length > 0) {

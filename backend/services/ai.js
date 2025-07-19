@@ -7,6 +7,7 @@ const {
   MAX_MEMORY_SIZE,
 } = require("./memory");
 const { performWebSearch } = require("./search");
+const chatHistoryService = require("./chatHistory");
 const { BufferMemory } = require("langchain/memory");
 const { MODEL_TIMEOUT } = require("../config/constants");
 
@@ -36,6 +37,20 @@ async function tryDirectAnswer(query, sessionId) {
     try {
       const historyVars = await conversationMemory.loadMemoryVariables({});
       historyContext = historyVars.history || "";
+
+      // If in-memory history is empty, try to load from database
+      if (!historyContext) {
+        const dbContext = await chatHistoryService.getConversationContext(
+          sessionId,
+          10
+        );
+        if (dbContext) {
+          historyContext = dbContext;
+          console.log(
+            `Loaded conversation context from database for session: ${sessionId}`
+          );
+        }
+      }
     } catch (error) {
       console.warn(`Could not load conversation history: ${error.message}`);
     }
