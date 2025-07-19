@@ -11,6 +11,8 @@ const {
   deleteChatHistoryController,
   searchMessagesController,
   getChatStatsController,
+  getQuickPreviewController,
+  getPaginatedMessagesController,
 } = require("../controllers/chatHistoryController");
 
 const router = express.Router();
@@ -21,10 +23,14 @@ router.get("/health", healthController);
 router.post("/clear-session", clearSessionController);
 router.get("/session/:sessionId", getSessionController);
 
-// New chat history routes
 router.get("/chat-history/:sessionId", getChatHistoryController);
 router.delete("/chat-history/:sessionId", deleteChatHistoryController);
 router.get("/chat-history/:sessionId/search", searchMessagesController);
+router.get("/chat-history/:sessionId/preview", getQuickPreviewController);
+router.get(
+  "/chat-history/:sessionId/paginated",
+  getPaginatedMessagesController
+);
 router.get("/sessions", getUserSessionsController);
 router.get("/chat-stats", getChatStatsController);
 

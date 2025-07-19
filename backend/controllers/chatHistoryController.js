@@ -160,10 +160,84 @@ const getChatStatsController = async (req, res) => {
   }
 };
 
+// Get quick preview of recent messages (optimized for fast loading)
+const getQuickPreviewController = async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { limit = 5 } = req.query;
+
+    if (!sessionId) {
+      return res.status(400).json({
+        error: "Session ID is required",
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    const preview = await chatHistoryService.getQuickPreview(
+      sessionId,
+      parseInt(limit)
+    );
+
+    res.json({
+      success: true,
+      data: {
+        sessionId,
+        preview,
+        count: preview.length,
+      },
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error("Error in getQuickPreviewController:", error.message);
+    res.status(500).json({
+      error: "Failed to retrieve quick preview",
+      timestamp: new Date().toISOString(),
+    });
+  }
+};
+
+// Get paginated messages (for infinite scroll)
+const getPaginatedMessagesController = async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { page = 1, limit = 20 } = req.query;
+
+    if (!sessionId) {
+      return res.status(400).json({
+        error: "Session ID is required",
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    const result = await chatHistoryService.getMessagesPaginated(
+      sessionId,
+      parseInt(page),
+      parseInt(limit)
+    );
+
+    res.json({
+      success: true,
+      data: {
+        sessionId,
+        ...result,
+      },
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error("Error in getPaginatedMessagesController:", error.message);
+    res.status(500).json({
+      error: "Failed to retrieve paginated messages",
+      timestamp: new Date().toISOString(),
+    });
+  }
+};
+
 module.exports = {
   getChatHistoryController,
   getUserSessionsController,
   deleteChatHistoryController,
   searchMessagesController,
   getChatStatsController,
+  getQuickPreviewController,
+  getPaginatedMessagesController,
 };

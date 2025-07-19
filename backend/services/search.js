@@ -11,7 +11,7 @@ async function performWebSearch(query) {
         "https://api.exa.ai/search",
         {
           query: query,
-          num_results: 5,
+          num_results: 4,
           use_autoprompt: true,
         },
         {

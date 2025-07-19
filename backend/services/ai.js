@@ -16,7 +16,7 @@ const model = createModel();
 function getCurrentDateTime() {
   const now = new Date();
   return now.toLocaleString("en-US", {
-    timeZone: "America/New_York",
+    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     weekday: "long",
     year: "numeric",
     month: "long",
@@ -38,7 +38,6 @@ async function tryDirectAnswer(query, sessionId) {
       const historyVars = await conversationMemory.loadMemoryVariables({});
       historyContext = historyVars.history || "";
 
-      // If in-memory history is empty, try to load from database
       if (!historyContext) {
         const dbContext = await chatHistoryService.getConversationContext(
           sessionId,

@@ -69,9 +69,22 @@ const ChatHistorySchema = new mongoose.Schema(
   }
 );
 
-// Index for efficient queries
-ChatHistorySchema.index({ sessionId: 1, createdAt: -1 });
-ChatHistorySchema.index({ userId: 1, updatedAt: -1 });
+// Indexes for efficient queries
+ChatHistorySchema.index({ sessionId: 1 }); // Most common query
+ChatHistorySchema.index({ userId: 1, updatedAt: -1 }); // User sessions sorted by recent
+ChatHistorySchema.index({ "metadata.lastActivity": -1 }); // For active sessions
+ChatHistorySchema.index({ sessionId: 1, "messages.timestamp": -1 }); // For message ordering
+
+// Compound index for efficient pagination
+ChatHistorySchema.index({
+  sessionId: 1,
+  "messages.timestamp": -1,
+});
+
+// Text index for message search (if you need full-text search)
+ChatHistorySchema.index({
+  "messages.content": "text",
+});
 
 // Pre-save middleware to update metadata
 ChatHistorySchema.pre("save", function (next) {
