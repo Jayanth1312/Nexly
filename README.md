@@ -48,6 +48,7 @@ npm start
 
 - Node.js
 - Express.js
+- MongoDB
 - Langchain
 - Groq AI
 - Exa Services
