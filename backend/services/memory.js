@@ -25,11 +25,14 @@ function getConversationMemory(sessionId) {
       outputKey: "response",
       returnMessages: false,
     });
+
     conversationMemories.set(sessionId, {
       memory,
       lastAccessed: Date.now(),
       messageCount: 0,
     });
+
+    console.log(`Created new memory for session: ${sessionId}`);
   }
 
   const memoryData = conversationMemories.get(sessionId);
@@ -38,33 +41,9 @@ function getConversationMemory(sessionId) {
   return memoryData.memory;
 }
 
-function getAssessmentMemory(sessionId) {
-  const conversationMemory = getConversationMemory(sessionId);
-
-  const assessmentMemory = new BufferMemory({
-    memoryKey: "history",
-    inputKey: "input",
-    outputKey: "response",
-    returnMessages: false,
-  });
-
-  try {
-    const historyVariables = conversationMemory.chatHistory || [];
-    if (historyVariables.length > 0) {
-      const contextSummary = "Previous topics discussed in this conversation.";
-      assessmentMemory.chatHistory = contextSummary;
-    }
-  } catch (error) {
-    console.warn(
-      `Could not access conversation history for assessment: ${error.message}`
-    );
-  }
-
-  return assessmentMemory;
-}
-
 function clearMemories() {
   conversationMemories.clear();
+  console.log("All memories cleared");
 }
 
 function hasSession(sessionId) {
@@ -72,31 +51,56 @@ function hasSession(sessionId) {
 }
 
 function deleteSession(sessionId) {
-  return conversationMemories.delete(sessionId);
+  const deleted = conversationMemories.delete(sessionId);
+  if (deleted) {
+    console.log(`Deleted session: ${sessionId}`);
+  }
+  return deleted;
 }
 
 function getSessionInfo(sessionId) {
   if (!conversationMemories.has(sessionId)) {
     return null;
   }
-  return conversationMemories.get(sessionId);
+
+  const memoryData = conversationMemories.get(sessionId);
+  return {
+    lastAccessed: memoryData.lastAccessed,
+    messageCount: memoryData.messageCount,
+    hasMemory: !!memoryData.memory,
+  };
 }
 
 function getMemoryStats() {
   return {
     activeSessions: conversationMemories.size,
+    sessions: Array.from(conversationMemories.keys()).map((sessionId) => ({
+      sessionId,
+      ...getSessionInfo(sessionId),
+    })),
   };
+}
+
+async function getMemoryContents(sessionId) {
+  const memory = getConversationMemory(sessionId);
+  try {
+    const variables = await memory.loadMemoryVariables({});
+    return variables;
+  } catch (error) {
+    console.error(`Error loading memory variables: ${error.message}`);
+    return null;
+  }
 }
 
 module.exports = {
   startMemoryCleanup,
   getConversationMemory,
-  getAssessmentMemory,
   clearMemories,
   hasSession,
   deleteSession,
   getSessionInfo,
   getMemoryStats,
+  getMemoryContents,
   conversationMemories,
   MAX_MEMORY_SIZE,
 };

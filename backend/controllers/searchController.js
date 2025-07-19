@@ -35,7 +35,6 @@ const searchController = async (req, res) => {
       });
     }
 
-    console.log(`Performing web search. Reason: ${directResult.reason}`);
     const searchResult = await performSearchBasedAnswer(query, sessionId);
     const processingTime = Date.now() - startTime;
 

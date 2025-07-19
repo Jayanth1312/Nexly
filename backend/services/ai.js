@@ -3,7 +3,6 @@ const { createModel } = require("../models/groq");
 const { knowledgeAssessmentPrompt, conversationPrompt } = require("../prompts");
 const {
   getConversationMemory,
-  getAssessmentMemory,
   conversationMemories,
   MAX_MEMORY_SIZE,
 } = require("./memory");
@@ -16,7 +15,7 @@ const model = createModel();
 function getCurrentDateTime() {
   const now = new Date();
   return now.toLocaleString("en-US", {
-    timeZone: "America/New_York", // or your preferred timezone
+    timeZone: "America/New_York",
     weekday: "long",
     year: "numeric",
     month: "long",
@@ -30,7 +29,6 @@ function getCurrentDateTime() {
 
 async function tryDirectAnswer(query, sessionId) {
   try {
-    const assessmentMemory = getAssessmentMemory(sessionId);
     const conversationMemory = getConversationMemory(sessionId);
     const currentDateTime = getCurrentDateTime();
 
@@ -42,30 +40,21 @@ async function tryDirectAnswer(query, sessionId) {
       console.warn(`Could not load conversation history: ${error.message}`);
     }
 
-    // Use the knowledgeAssessmentPrompt to determine if we can answer directly
     const assessmentChain = new ConversationChain({
       llm: model,
-      memory: assessmentMemory,
+      memory: conversationMemory,
       prompt: knowledgeAssessmentPrompt,
     });
 
     const result = await Promise.race([
       assessmentChain.call({
-        input: query,
-        history: historyContext,
+        input: `Current conversation history: ${historyContext}\n\nNew query: ${query}`,
         currentDateTime: currentDateTime,
       }),
       new Promise((_, reject) =>
         setTimeout(() => reject(new Error("Assessment timeout")), MODEL_TIMEOUT)
       ),
     ]);
-
-    console.log(
-      `Assessment result for "${query}": ${result.response.substring(
-        0,
-        100
-      )}...`
-    );
 
     if (result.response.startsWith("INAPPROPRIATE:")) {
       throw new Error("Inappropriate content detected");
@@ -81,20 +70,22 @@ async function tryDirectAnswer(query, sessionId) {
         );
 
         const memoryData = conversationMemories.get(sessionId);
-        memoryData.messageCount++;
+        if (memoryData) {
+          memoryData.messageCount++;
 
-        if (memoryData.messageCount > MAX_MEMORY_SIZE) {
-          const newMemory = new BufferMemory({
-            memoryKey: "history",
-            inputKey: "input",
-            outputKey: "response",
-            returnMessages: false,
-          });
-          memoryData.memory = newMemory;
-          memoryData.messageCount = 0;
-          console.log(
-            `Reset memory for session ${sessionId} due to size limit`
-          );
+          if (memoryData.messageCount > MAX_MEMORY_SIZE) {
+            const newMemory = new BufferMemory({
+              memoryKey: "history",
+              inputKey: "input",
+              outputKey: "response",
+              returnMessages: false,
+            });
+            memoryData.memory = newMemory;
+            memoryData.messageCount = 0;
+            console.log(
+              `Reset memory for session ${sessionId} due to size limit`
+            );
+          }
         }
       } catch (error) {
         console.warn(`Failed to save context to memory: ${error.message}`);
@@ -107,11 +98,9 @@ async function tryDirectAnswer(query, sessionId) {
     } else if (result.response.startsWith("SEARCH_NEEDED:")) {
       return {
         canAnswer: false,
-        reason: result.response.replace("SEARCH_NEEDED:", "").trim(),
       };
     }
 
-    // If response doesn't start with either, assume search is needed
     return {
       canAnswer: false,
       reason: "Response format unclear - defaulting to search for accuracy",
@@ -131,7 +120,6 @@ async function performSearchBasedAnswer(query, sessionId) {
 
   try {
     const searchResults = await performWebSearch(query);
-
     const context = searchResults
       .map((source, index) => `[${index + 1}] ${source.title}: ${source.text}`)
       .join("\n\n");
@@ -155,6 +143,31 @@ async function performSearchBasedAnswer(query, sessionId) {
         )
       ),
     ]);
+
+    try {
+      await memory.saveContext({ input: query }, { response: result.response });
+
+      const memoryData = conversationMemories.get(sessionId);
+      if (memoryData) {
+        memoryData.messageCount++;
+
+        if (memoryData.messageCount > MAX_MEMORY_SIZE) {
+          const newMemory = new BufferMemory({
+            memoryKey: "history",
+            inputKey: "input",
+            outputKey: "response",
+            returnMessages: false,
+          });
+          memoryData.memory = newMemory;
+          memoryData.messageCount = 0;
+          console.log(
+            `Reset memory for session ${sessionId} due to size limit`
+          );
+        }
+      }
+    } catch (error) {
+      console.warn(`Failed to save search context to memory: ${error.message}`);
+    }
 
     return {
       answer: result.response,
