@@ -13,10 +13,26 @@ const { MODEL_TIMEOUT } = require("../config/constants");
 
 const model = createModel();
 
+function getCurrentDateTime() {
+  const now = new Date();
+  return now.toLocaleString("en-US", {
+    timeZone: "America/New_York", // or your preferred timezone
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    timeZoneName: "short",
+  });
+}
+
 async function tryDirectAnswer(query, sessionId) {
   try {
     const assessmentMemory = getAssessmentMemory(sessionId);
     const conversationMemory = getConversationMemory(sessionId);
+    const currentDateTime = getCurrentDateTime();
 
     let historyContext = "";
     try {
@@ -26,36 +42,7 @@ async function tryDirectAnswer(query, sessionId) {
       console.warn(`Could not load conversation history: ${error.message}`);
     }
 
-    const timeSensitiveKeywords = [
-      "latest",
-      "newest",
-      "current",
-      "recent",
-      "now",
-      "today",
-      "this year",
-      "this month",
-      "updated",
-      "new release",
-      "just announced",
-      "breaking",
-      "right now",
-      "currently",
-    ];
-
-    const queryLower = query.toLowerCase();
-    const hasTimeSensitiveKeyword = timeSensitiveKeywords.some((keyword) =>
-      queryLower.includes(keyword)
-    );
-
-    if (hasTimeSensitiveKeyword) {
-      return {
-        canAnswer: false,
-        reason:
-          "Question contains time-sensitive keywords requiring current data",
-      };
-    }
-
+    // Use the knowledgeAssessmentPrompt to determine if we can answer directly
     const assessmentChain = new ConversationChain({
       llm: model,
       memory: assessmentMemory,
@@ -63,14 +50,21 @@ async function tryDirectAnswer(query, sessionId) {
     });
 
     const result = await Promise.race([
-      assessmentChain.call({ input: query, history: historyContext }),
+      assessmentChain.call({
+        input: query,
+        history: historyContext,
+        currentDateTime: currentDateTime,
+      }),
       new Promise((_, reject) =>
         setTimeout(() => reject(new Error("Assessment timeout")), MODEL_TIMEOUT)
       ),
     ]);
 
     console.log(
-      `Assessment result for "${query}": ${result.response.substring(0, 50)}...`
+      `Assessment result for "${query}": ${result.response.substring(
+        0,
+        100
+      )}...`
     );
 
     if (result.response.startsWith("INAPPROPRIATE:")) {
@@ -117,7 +111,11 @@ async function tryDirectAnswer(query, sessionId) {
       };
     }
 
-    return { canAnswer: false, reason: "Uncertain about answer quality" };
+    // If response doesn't start with either, assume search is needed
+    return {
+      canAnswer: false,
+      reason: "Response format unclear - defaulting to search for accuracy",
+    };
   } catch (error) {
     console.error(`Error in direct answer assessment: ${error.message}`);
     return {
@@ -129,6 +127,7 @@ async function tryDirectAnswer(query, sessionId) {
 
 async function performSearchBasedAnswer(query, sessionId) {
   const memory = getConversationMemory(sessionId);
+  const currentDateTime = getCurrentDateTime();
 
   try {
     const searchResults = await performWebSearch(query);
@@ -147,6 +146,7 @@ async function performSearchBasedAnswer(query, sessionId) {
       chain.call({
         input: query,
         context: context,
+        currentDateTime: currentDateTime,
       }),
       new Promise((_, reject) =>
         setTimeout(

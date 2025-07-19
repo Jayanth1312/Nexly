@@ -11,7 +11,7 @@ if (missingEnvVars.length > 0) {
 const PORT = process.env.PORT || 3001;
 const NODE_ENV = process.env.NODE_ENV || "development";
 const MAX_MEMORY_SIZE = parseInt(process.env.MAX_MEMORY_SIZE) || 250;
-const SEARCH_TIMEOUT = parseInt(process.env.SEARCH_TIMEOUT) || 20000;
+const SEARCH_TIMEOUT = parseInt(process.env.SEARCH_TIMEOUT) || 15000;
 const MODEL_TIMEOUT = parseInt(process.env.MODEL_TIMEOUT) || 15000;
 
 module.exports = {
