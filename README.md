@@ -172,6 +172,10 @@ GITHUB_CLIENT_SECRET=your-github-client-secret
 # Frontend URL
 FRONTEND_URL=http://localhost:3000
 
+# Email Configuration
+RESEND_API_KEY=RESEND_API_STARTS_WITH: re
+EMAIL_FROM=Nexly <onboarding@resend.dev>
+
 # CORS
 ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
 ```
