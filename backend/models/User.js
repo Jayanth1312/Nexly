@@ -45,6 +45,15 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    // Password reset
+    passwordResetToken: {
+      type: String,
+      default: null,
+    },
+    passwordResetExpires: {
+      type: Date,
+      default: null,
+    },
     // Timestamps
     lastLogin: {
       type: Date,
@@ -92,6 +101,37 @@ userSchema.statics.findByProvider = function (provider, id) {
   const query = {};
   query[`providers.${provider}.id`] = id;
   return this.findOne(query);
+};
+
+// Instance method to generate password reset token
+userSchema.methods.createPasswordResetToken = function () {
+  const crypto = require("crypto");
+  const resetToken = crypto.randomBytes(32).toString("hex");
+
+  this.passwordResetToken = crypto
+    .createHash("sha256")
+    .update(resetToken)
+    .digest("hex");
+  this.passwordResetExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+  return resetToken;
+};
+
+// Instance method to verify password reset token
+userSchema.methods.verifyPasswordResetToken = function (token) {
+  const crypto = require("crypto");
+  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+  return (
+    this.passwordResetToken === hashedToken &&
+    this.passwordResetExpires > Date.now()
+  );
+};
+
+// Instance method to clear password reset fields
+userSchema.methods.clearPasswordReset = function () {
+  this.passwordResetToken = null;
+  this.passwordResetExpires = null;
 };
 
 // Transform output to remove sensitive data

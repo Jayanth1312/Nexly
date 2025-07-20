@@ -11,6 +11,11 @@ router.post("/login", authController.login);
 router.post("/logout", authController.logout);
 router.get("/profile", authenticateToken, authController.getProfile);
 
+// Password reset routes
+router.post("/forgot-password", authController.requestPasswordReset);
+router.post("/reset-password", authController.resetPassword);
+router.get("/verify-reset-token/:token", authController.verifyResetToken);
+
 // Google OAuth routes
 router.get(
   "/google",

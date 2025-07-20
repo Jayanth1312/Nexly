@@ -1,5 +1,6 @@
 const User = require("../models/User");
 const jwt = require("jsonwebtoken");
+const modernEmailService = require("../services/resendEmail");
 
 // Generate JWT token
 const generateToken = (userId) => {
@@ -190,6 +191,162 @@ const oauthFailure = (req, res) => {
   res.redirect(`${frontendURL}/auth/error`);
 };
 
+// Request password reset
+const requestPasswordReset = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is required",
+      });
+    }
+
+    // Find user by email
+    const user = await User.findByEmail(email);
+    if (!user) {
+      // Don't reveal if user exists or not for security
+      return res.status(200).json({
+        success: true,
+        message:
+          "If an account with that email exists, we've sent a password reset link",
+      });
+    }
+
+    // Check if user has a password (not OAuth-only user)
+    if (!user.password) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "This account uses social login. Please sign in with Google or GitHub.",
+      });
+    }
+
+    // Generate reset token
+    const resetToken = user.createPasswordResetToken();
+    await user.save({ validateBeforeSave: false });
+
+    // Send email
+    await modernEmailService.sendPasswordResetEmail(
+      user.email,
+      user.name,
+      resetToken
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Password reset link sent to your email",
+    });
+  } catch (error) {
+    console.error("Password reset request error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+// Reset password with token
+const resetPassword = async (req, res) => {
+  try {
+    const { token, password } = req.body;
+
+    if (!token || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Token and new password are required",
+      });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 6 characters long",
+      });
+    }
+
+    // Hash the token to compare with stored hash
+    const crypto = require("crypto");
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+    // Find user with valid reset token
+    const user = await User.findOne({
+      passwordResetToken: hashedToken,
+      passwordResetExpires: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired password reset token",
+      });
+    }
+
+    // Update password and clear reset fields
+    user.password = password;
+    user.clearPasswordReset();
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Password reset successfully",
+    });
+  } catch (error) {
+    console.error("Password reset error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+// Verify reset token validity
+const verifyResetToken = async (req, res) => {
+  try {
+    const { token } = req.params;
+
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        message: "Reset token is required",
+      });
+    }
+
+    // Hash the token to compare with stored hash
+    const crypto = require("crypto");
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+    // Find user with valid reset token
+    const user = await User.findOne({
+      passwordResetToken: hashedToken,
+      passwordResetExpires: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired password reset token",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Token is valid",
+      data: {
+        email: user.email,
+        name: user.name,
+      },
+    });
+  } catch (error) {
+    console.error("Token verification error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
 module.exports = {
   register,
   login,
@@ -197,4 +354,7 @@ module.exports = {
   getProfile,
   oauthSuccess,
   oauthFailure,
+  requestPasswordReset,
+  resetPassword,
+  verifyResetToken,
 };
