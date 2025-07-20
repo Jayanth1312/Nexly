@@ -1,3 +1,4 @@
+require("dotenv").config();
 const express = require("express");
 const { setupMiddleware } = require("./middleware");
 const { startMemoryCleanup, clearMemories } = require("./services/memory");

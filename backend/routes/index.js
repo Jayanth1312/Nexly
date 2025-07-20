@@ -15,7 +15,13 @@ const {
   getPaginatedMessagesController,
 } = require("../controllers/chatHistoryController");
 
+// Import auth routes
+const authRoutes = require("./auth");
+
 const router = express.Router();
+
+// Auth routes
+router.use("/auth", authRoutes);
 
 // Existing routes
 router.post("/search", searchController);
