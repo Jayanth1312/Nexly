@@ -34,18 +34,15 @@ const ChatHistorySchema = new mongoose.Schema(
     sessionId: {
       type: String,
       required: true,
-      index: true,
     },
     userId: {
       type: String,
       default: "anonymous",
-      index: true,
     },
     messages: [MessageSchema],
     createdAt: {
       type: Date,
       default: Date.now,
-      index: true,
     },
     updatedAt: {
       type: Date,
@@ -72,14 +69,9 @@ const ChatHistorySchema = new mongoose.Schema(
 // Indexes for efficient queries
 ChatHistorySchema.index({ sessionId: 1 }); // Most common query
 ChatHistorySchema.index({ userId: 1, updatedAt: -1 }); // User sessions sorted by recent
+ChatHistorySchema.index({ createdAt: -1 }); // For sorting by creation date
 ChatHistorySchema.index({ "metadata.lastActivity": -1 }); // For active sessions
 ChatHistorySchema.index({ sessionId: 1, "messages.timestamp": -1 }); // For message ordering
-
-// Compound index for efficient pagination
-ChatHistorySchema.index({
-  sessionId: 1,
-  "messages.timestamp": -1,
-});
 
 // Text index for message search (if you need full-text search)
 ChatHistorySchema.index({
