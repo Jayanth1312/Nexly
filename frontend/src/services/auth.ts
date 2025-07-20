@@ -114,6 +114,39 @@ export const authService = {
     return Cookies.get("token");
   },
 
+  // Request password reset
+  requestPasswordReset: async (email: string) => {
+    try {
+      const response = await api.post("/auth/forgot-password", { email });
+      return response.data;
+    } catch (error: any) {
+      throw error.response?.data || { message: "Failed to send reset email" };
+    }
+  },
+
+  // Reset password with token
+  resetPassword: async (token: string, password: string) => {
+    try {
+      const response = await api.post("/auth/reset-password", {
+        token,
+        password,
+      });
+      return response.data;
+    } catch (error: any) {
+      throw error.response?.data || { message: "Failed to reset password" };
+    }
+  },
+
+  // Verify reset token
+  verifyResetToken: async (token: string) => {
+    try {
+      const response = await api.get(`/auth/verify-reset-token/${token}`);
+      return response.data;
+    } catch (error: any) {
+      throw error.response?.data || { message: "Invalid or expired token" };
+    }
+  },
+
   // OAuth URLs
   getGoogleAuthUrl: () => `${API_BASE_URL}/auth/google`,
   getGitHubAuthUrl: () => `${API_BASE_URL}/auth/github`,

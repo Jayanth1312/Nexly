@@ -220,12 +220,12 @@ export default function SignIn() {
           </form>
           <p className="mt-6 text-sm text-muted-foreground dark:text-muted-foreground">
             Forgot your password?{" "}
-            <a
-              href="#"
+            <Link
+              href="/forgot-password"
               className="font-medium text-primary hover:text-primary/90 dark:text-primary hover:dark:text-primary/90"
             >
               Reset password
-            </a>
+            </Link>
           </p>
         </div>
       </div>
