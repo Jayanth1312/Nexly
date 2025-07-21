@@ -1,6 +1,6 @@
-# Nexly - AI-Powered Platform
+# Nexly - AI-Powered assitant platform
 
-Nexly is a modern AI-powered platform with a Next.js frontend and Express.js backend, featuring comprehensive authentication, search capabilities, and AI integration.
+Nexly is a modern AI-powered assistant platform with a Next.js frontend and Express.js backend, featuring comprehensive authentication, search capabilities, and AI integration.
 
 ## ✨ Features
 
