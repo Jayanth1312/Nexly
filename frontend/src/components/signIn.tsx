@@ -10,6 +10,7 @@ import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
 import { authService } from "@/services/auth";
 import { useRouter } from "next/navigation";
+import Cookies from "js-cookie";
 
 const GitHubIcon = (
   props: JSX.IntrinsicAttributes & SVGProps<SVGSVGElement>
@@ -73,11 +74,60 @@ export default function SignIn() {
     }
 
     try {
-      await authService.login({ email, password });
+      console.log("Attempting to login with:", { email });
+      const result = await authService.login({ email, password });
+      console.log("Login successful:", result);
 
-      // Redirect to dashboard or home page
-      router.push("/");
+      // Wait for token to be stored and then verify it with retries
+      let storedToken = null;
+      let retryCount = 0;
+      const maxRetries = 10;
+
+      while (!storedToken && retryCount < maxRetries) {
+        await new Promise((resolve) => setTimeout(resolve, 100)); // Wait 100ms
+
+        // Try all methods to get the token
+        storedToken = Cookies.get("token");
+        if (!storedToken) {
+          // Fallback to document.cookie
+          storedToken = document.cookie
+            .split("; ")
+            .find((row) => row.startsWith("token="))
+            ?.split("=")[1];
+        }
+        if (!storedToken && typeof window !== "undefined") {
+          // Fallback to localStorage
+          storedToken = localStorage.getItem("token");
+        }
+
+        retryCount++;
+        console.log(
+          `Token verification attempt ${retryCount}: ${
+            storedToken ? "found" : "not found"
+          }`
+        );
+
+        if (storedToken) {
+          const method = Cookies.get("token")
+            ? "js-cookie"
+            : document.cookie.includes("token=")
+            ? "document.cookie"
+            : "localStorage";
+          console.log("Token found with method:", method);
+        }
+      }
+
+      if (storedToken) {
+        console.log("Token verified in storage, redirecting to /chat...");
+        // Use router.push for navigation
+        router.push("/chat");
+      } else {
+        console.error("Token not found in storage after login and retries");
+        setError("Authentication failed. Please try again.");
+        setIsLoading(false);
+      }
     } catch (error: any) {
+      console.error("Login error:", error);
       setError(error.message || "Login failed. Please try again.");
     } finally {
       setIsLoading(false);

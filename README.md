@@ -368,10 +368,6 @@ All sensitive configuration is managed through environment variables. See the in
 4. Add tests if applicable
 5. Submit a pull request
 
-## 📄 License
-
-This project is licensed under the MIT License.
-
 ## 👥 Authors
 
 - **Jayanth Paladugu** - Initial work and development

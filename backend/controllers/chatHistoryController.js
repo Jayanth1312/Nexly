@@ -5,10 +5,23 @@ const getChatHistoryController = async (req, res) => {
   try {
     const { sessionId } = req.params;
     const { limit } = req.query;
+    const userId = req.user.userId; // Get from authenticated user
 
     if (!sessionId) {
       return res.status(400).json({
         error: "Session ID is required",
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    // Verify session belongs to user
+    const session = await chatHistoryService.getSessionByIdAndUser(
+      sessionId,
+      userId
+    );
+    if (!session) {
+      return res.status(404).json({
+        error: "Session not found or access denied",
         timestamp: new Date().toISOString(),
       });
     }
@@ -35,7 +48,7 @@ const getChatHistoryController = async (req, res) => {
 // Get all sessions for a user
 const getUserSessionsController = async (req, res) => {
   try {
-    const { userId = "anonymous" } = req.query;
+    const userId = req.user.userId; // Get from authenticated user
     const { limit } = req.query;
 
     const sessions = await chatHistoryService.getUserSessions(
@@ -65,10 +78,23 @@ const getUserSessionsController = async (req, res) => {
 const deleteChatHistoryController = async (req, res) => {
   try {
     const { sessionId } = req.params;
+    const userId = req.user.userId; // Get from authenticated user
 
     if (!sessionId) {
       return res.status(400).json({
         error: "Session ID is required",
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    // Verify session belongs to user before deleting
+    const session = await chatHistoryService.getSessionByIdAndUser(
+      sessionId,
+      userId
+    );
+    if (!session) {
+      return res.status(404).json({
+        error: "Session not found or access denied",
         timestamp: new Date().toISOString(),
       });
     }
