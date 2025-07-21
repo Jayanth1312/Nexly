@@ -24,9 +24,9 @@ export default function AuthSuccessPage() {
 
       setStatus("success");
 
-      // Redirect to home after a short delay
+      // Redirect to chat after a short delay
       setTimeout(() => {
-        router.push("/");
+        router.push("/chat");
       }, 2000);
     } else {
       setStatus("error");

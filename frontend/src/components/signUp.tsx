@@ -114,16 +114,23 @@ export default function SignUp() {
     }
 
     try {
-      await authService.register({
+      console.log("Attempting to register with:", { email, name });
+      const result = await authService.register({
         email,
         name,
         profession,
         password,
       });
+      console.log("Registration successful:", result);
 
-      // Redirect to dashboard or home page
-      router.push("/");
+      // Add a small delay to ensure the token is properly stored
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      // Redirect to chat page after successful registration
+      console.log("Redirecting to /chat...");
+      window.location.href = "/chat";
     } catch (error: any) {
+      console.error("Registration error:", error);
       setError(error.message || "Registration failed. Please try again.");
     } finally {
       setIsLoading(false);

@@ -128,12 +128,17 @@ async function tryDirectAnswer(query, sessionId) {
   }
 }
 
-async function performSearchBasedAnswer(query, sessionId) {
+async function performSearchBasedAnswer(
+  query,
+  sessionId,
+  preSearchResults = null
+) {
   const memory = getConversationMemory(sessionId);
   const currentDateTime = getCurrentDateTime();
 
   try {
-    const searchResults = await performWebSearch(query);
+    // Use pre-fetched results or perform new search
+    const searchResults = preSearchResults || (await performWebSearch(query));
     const context = searchResults
       .map((source, index) => `[${index + 1}] ${source.title}: ${source.text}`)
       .join("\n\n");

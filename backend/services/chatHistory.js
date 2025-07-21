@@ -115,6 +115,20 @@ class ChatHistoryService {
     }
   }
 
+  // Get session by ID and verify user ownership
+  async getSessionByIdAndUser(sessionId, userId) {
+    try {
+      const session = await ChatHistory.findOne({ sessionId, userId });
+      return session;
+    } catch (error) {
+      console.error(
+        `Error retrieving session ${sessionId} for user ${userId}:`,
+        error.message
+      );
+      throw error;
+    }
+  }
+
   // Delete a specific session
   async deleteSession(sessionId) {
     try {
